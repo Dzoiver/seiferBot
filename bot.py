@@ -1,4 +1,5 @@
 from __future__ import print_function
+import requests
 import random
 import telebot
 import od_python
@@ -69,6 +70,29 @@ def command_handler(message: Message):
 @tb.message_handler(commands=['help'])
 def command_handler(message: Message):
     tb.reply_to(message, command_list)
+
+@tb.message_handler(commands=['weather'])
+def command_handler(message: Message):
+    api_key = '4b4f27869ff5dd5617a6c5fd9f3b9870'
+    base_url = "http://api.openweathermap.org/data/2.5/weather?"
+    city = 'ulyanovsk'
+    current_temp = 0
+    if len(message.text.split()) == 2:
+        city = message.text[9:]
+        url = base_url + "appid=" + api_key + "&q=" + city
+        json_data = requests.get(url).json()
+        info = json_data['main']
+        current_temp = info['temp']
+        tb.reply_to (message, 'Погода в городе ' + city + ' ' + str (int (current_temp) - 273) + ' градусов цельсия')
+    if len(message.text.split()) > 2:
+        city = message.text[9:message.text.find(' ')]
+        url = base_url + "appid=" + api_key + "&q=" + city
+        json_data = requests.get(url).json()
+        info = json_data['main']
+        current_temp = info['temp']
+        tb.reply_to (message, 'Погода в городе ' + city + ' ' + str (int (current_temp) - 273) + ' градусов цельсия')
+    if len(message.text.split()) == 1:
+        tb.reply_to(message, 'Укажите город через пробел')
 
 
 
