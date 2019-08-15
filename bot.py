@@ -75,8 +75,6 @@ def command_handler(message: Message):
 def command_handler(message: Message):
     api_key = '4b4f27869ff5dd5617a6c5fd9f3b9870'
     base_url = "http://api.openweathermap.org/data/2.5/weather?"
-    city = 'ulyanovsk'
-    current_temp = 0
     if len(message.text.split()) == 2:
         city = message.text[9:]
         url = base_url + "appid=" + api_key + "&q=" + city
