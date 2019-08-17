@@ -5,6 +5,13 @@ import telebot
 import od_python
 from telebot.types import Message
 from od_python.rest import ApiException
+from bs4 import BeautifulSoup as soup
+from urllib.request import urlopen as uReq
+import vk_api
+import acc_data
+from vk_api.tools import VkFunction
+
+# print(photos.get('items'))
 
 # create an instance of the API class
 api_instance = od_python.HeroesApi()
@@ -34,6 +41,20 @@ privet_answers = [
     'привет',
     'ПРИВЕТ!',
     'Привет',
+    'Здравствуй',
+    'Добрый день',
+    'Прифки',
+    'Хай',
+    'Приветик',
+    'Здарова',
+    'Хочу, чтобы животные могли разговаривать',
+
+]
+
+phrase_podderzhka = [
+    'Выше нос! Давай попробуем изменить это печальное выражение на твоем лице. Когда ты улыбаешься, ты будто начинаешь светиться изнутри. Ради этого стоит придумать повод для улыбки',
+    'У тебя уже были трудные моменты, которые остались позади. Согласись, что теперь уже многие из них забыты или вспоминаются смутно. Спустя какое-то время и эта неприятность останется размытым пятном в памяти',
+    'Попробуй посмотреть на эту ситуацию с другой стороны. Ты обладаешь ценностями, столь желанными для многих: здоровьем, хорошей внешностью, живым умом и чувством юмора. С такими качествами нельзя долго унывать',
 ]
 try:
     heroes = api_instance.heroes_get()
@@ -45,12 +66,22 @@ except:
 else:
     opendotaOK = True
 
-TOKEN = ''
-tb = telebot.TeleBot(TOKEN)
+
+tb = telebot.TeleBot(acc_data.TOKEN)
 # telebot.apihelper.proxy = {'http': 'http://62.210.38.159:8080'}
-telebot.apihelper.proxy = {'http': 'http://199.21.99.15:80'}
-telebot.apihelper.proxy = {'https': 'http://66.42.115.124:8080'}
-telebot.apihelper.proxy = {'https': 'http://188.152.163.140:8118'}
+# telebot.apihelper.proxy = {'http': 'http://93.170.4.145:34148'}
+# telebot.apihelper.proxy = {'http': 'http://180.247.5.10:8080'}
+# telebot.apihelper.proxy = {'http': 'http://213.6.162.6:8080'}
+# telebot.apihelper.proxy = {'http': 'http://178.150.84.139:38194'}
+# telebot.apihelper.proxy = {'http': 'http://109.169.14.163:80'}
+telebot.apihelper.proxy = {'https': 'http://186.103.175.158:3128'}
+# telebot.apihelper.proxy = {'https': 'https://163.172.162.215:8811'}
+# #
+# telebot.apihelper.proxy = {'http': 'http://199.21.99.15:80'}
+# telebot.apihelper.proxy = {'http': 'http://163.172.162.215:8811'}
+# telebot.apihelper.proxy = {'https': 'http://183.89.177.65:8080'}
+# telebot.apihelper.proxy = {'https': 'http://66.42.115.124:8080'}
+# telebot.apihelper.proxy = {'https': 'http://188.152.163.140:8118'}
 
 command_list = ''' 
 ### Вот список моих команд ### 
@@ -59,6 +90,9 @@ command_list = '''
 # !выбор - выбирает один из двух вариантов, разделённых словом "или". Формат: !выбор [вариант1] или [вариант2]
 # !на ком сыграть - выбирает случайного героя из Dota 2
 # !заметка - оставляет заметку о человеке. Формат: !заметка [имя] [информация]
+# !пикча - скидывает случайную картинку из альбома секретного пользователя вконтакте 
+(не сработает, если у вас нет в друзьях этого пользователя)
+# !мудрость - говорит вам случайную мудрую фразу
 ### ###
 '''
 
@@ -143,10 +177,53 @@ def echo_digits(message: Message):
             name = message.text[message.text.find(' ')+1:]
             f = open(name + '.txt', 'r')
             tb.reply_to(message, f.read())
+    if '!РОЛЛ' in message.text.upper():
+        if len(message.text.split()) == 1:
+            tb.reply_to(message, 'Напишите число через пробел')
+        if len(message.text.split()) == 2:
+            random_number = random.randint(0, int(message.text[message.text.find(' ')+1:]))
+            tb.reply_to(message, str(random_number))
+        if len(message.text.split()) > 2:
+            substr = message.text[message.text.find(' '):]
+            print(substr[1:])
+            print(substr.find(' '))
+            try:
+                random_number = random.randint(0, int(substr[1:substr.find(' ')]))
+                tb.reply_to(message, str(random_number))
+            except:
+                tb.reply_to(message, 'Пожалуйста только одно число после команды')
+
+    if '!МУДРОСТЬ' in message.text.upper():
+        my_url = 'https://randstuff.ru/saying/'
+        uClient = uReq(my_url)
+        page_html = uClient.read()
+        uClient.close()
+        page_soup = soup(page_html, 'html.parser')
+        saying = page_soup.find('div', {'id': 'saying'})
+        sayingText = saying.table.tr.td.text
+        tb.reply_to(message, sayingText)
+    if '!ПИКЧА' in message.text.upper():
+        vk_session = vk_api.VkApi(acc_data.vk_login, acc_data.vk_password)
+        vk_session.auth()
+        vk = vk_session.get_api()
+        rnd = random.randint(0, 999)
+        rndOffset = random.randint(0, 10416)
+        photos = vk.photos.get(owner_id=364994731, album_id='saved', count=1000, offset=rndOffset)
+        image = photos['items'][rnd]['sizes'][-1]['url']
+        tb.reply_to(message, image)
+
 
 @tb.message_handler(content_types=['photo']) # Sends all images sent to bot to me
 def saveImages(message: Message):
     fileinfo = tb.get_file(message.photo[0].file_id)
     tb.send_photo(396337180, fileinfo.file_id)
 
-tb.polling(timeout=5)
+@tb.message_handler(content_types=['sticker'])
+def sendSticker(message: Message):
+    pass
+    # for e isn message.sticker
+    # print(message.sticker)
+    # tb.sticker
+    # info = tb.get_sticker_set('Girls love story')
+
+tb.polling(timeout=10)
