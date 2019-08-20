@@ -256,6 +256,7 @@ def sendSticker(message: Message):
 
 # tb.polling(timeout=10)
 
+
 @server.route('/' + acc_data.TOKEN, methods=['POST'])
 def getMessage():
     tb.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
