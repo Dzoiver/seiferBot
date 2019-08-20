@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup as soup
 from urllib.request import urlopen as uReq
 import vk_api
 import acc_data
+from datetime import datetime
 from vk_api.tools import VkFunction
 
 # print(photos.get('items'))
@@ -18,6 +19,9 @@ api_instance = od_python.HeroesApi()
 hero_id = 'hero_id_example' # str | Hero ID
 
 opendotaOK = False
+
+rnd = 0
+rndOffset = 0
 
 sleep_answers_yes = [
     'Да',
@@ -51,11 +55,6 @@ privet_answers = [
 
 ]
 
-phrase_podderzhka = [
-    'Выше нос! Давай попробуем изменить это печальное выражение на твоем лице. Когда ты улыбаешься, ты будто начинаешь светиться изнутри. Ради этого стоит придумать повод для улыбки',
-    'У тебя уже были трудные моменты, которые остались позади. Согласись, что теперь уже многие из них забыты или вспоминаются смутно. Спустя какое-то время и эта неприятность останется размытым пятном в памяти',
-    'Попробуй посмотреть на эту ситуацию с другой стороны. Ты обладаешь ценностями, столь желанными для многих: здоровьем, хорошей внешностью, живым умом и чувством юмора. С такими качествами нельзя долго унывать',
-]
 try:
     heroes = api_instance.heroes_get()
 
@@ -69,12 +68,13 @@ else:
 
 tb = telebot.TeleBot(acc_data.TOKEN)
 # telebot.apihelper.proxy = {'http': 'http://62.210.38.159:8080'}
+telebot.apihelper.proxy = {'https': 'http://163.172.136.226:8811'}
 # telebot.apihelper.proxy = {'http': 'http://93.170.4.145:34148'}
 # telebot.apihelper.proxy = {'http': 'http://180.247.5.10:8080'}
 # telebot.apihelper.proxy = {'http': 'http://213.6.162.6:8080'}
 # telebot.apihelper.proxy = {'http': 'http://178.150.84.139:38194'}
 # telebot.apihelper.proxy = {'http': 'http://109.169.14.163:80'}
-telebot.apihelper.proxy = {'https': 'http://186.103.175.158:3128'}
+# telebot.apihelper.proxy = {'https': 'http://186.103.175.158:3128'}
 # telebot.apihelper.proxy = {'https': 'https://163.172.162.215:8811'}
 # #
 # telebot.apihelper.proxy = {'http': 'http://199.21.99.15:80'}
@@ -90,8 +90,8 @@ command_list = '''
 # !выбор - выбирает один из двух вариантов, разделённых словом "или". Формат: !выбор [вариант1] или [вариант2]
 # !на ком сыграть - выбирает случайного героя из Dota 2
 # !заметка - оставляет заметку о человеке. Формат: !заметка [имя] [информация]
-# !пикча - скидывает случайную картинку из альбома секретного пользователя вконтакте 
-(не сработает, если у вас нет в друзьях этого пользователя)
+# !пикча - скидывает случайную картинку из сохранённых фотографий секретного пользователя вконтакте 
+(не сработает, если вы не я)
 # !мудрость - говорит вам случайную мудрую фразу
 ### ###
 '''
@@ -130,6 +130,7 @@ def command_handler(message: Message):
 
 @tb.message_handler(content_types=['text'])
 def echo_digits(message: Message):
+    global rnd, rndOffset
     if '!ПОЙТИ СПАТЬ' in message.text.upper():
         respond = random.randint(0, 1)
         if respond == 1:
@@ -202,15 +203,39 @@ def echo_digits(message: Message):
         saying = page_soup.find('div', {'id': 'saying'})
         sayingText = saying.table.tr.td.text
         tb.reply_to(message, sayingText)
-    if '!ПИКЧА' in message.text.upper():
+    if '!ПИКЧА' in message.text.upper() and len(message.text.split()) == 1:
         vk_session = vk_api.VkApi(acc_data.vk_login, acc_data.vk_password)
         vk_session.auth()
         vk = vk_session.get_api()
         rnd = random.randint(0, 999)
-        rndOffset = random.randint(0, 10416)
+        rndOffset = random.randint(1, 10415)
+        try:
+            photos = vk.photos.get(owner_id=364994731, album_id='saved', count=1000, offset=rndOffset)
+            image = photos['items'][rnd]['sizes'][-1]['url']
+        except vk_api.exceptions.ApiError:
+            tb.send_message(message.chat.id, 'Соня ну пожалуйста открой их обратно, мне нравятся эти картинки')
+        except IndexError:
+            print('Error\nrnd = ' + str(rnd))
+            tb.send_message(message.chat.id, 'Упс, ошибка в индексе. Если бы не это исключение, то я бы сейчас упал')
+        else:
+            # print(message.chat.id)
+            tb.send_photo(message.chat.id, image)
+    if '!ПИКЧА ДАТА' in message.text.upper():
+        vk_session = vk_api.VkApi(acc_data.vk_login, acc_data.vk_password)
+        vk_session.auth()
+        vk = vk_session.get_api()
         photos = vk.photos.get(owner_id=364994731, album_id='saved', count=1000, offset=rndOffset)
+        # image = photos['items'][rnd]['sizes'][-1]['url']
         image = photos['items'][rnd]['sizes'][-1]['url']
-        tb.reply_to(message, image)
+        
+        date = photos['items'][0]['date']
+        date = int(date)
+        realDate = datetime.utcfromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')
+
+        # tb.send_photo(message.chat.id, image)
+        tb.send_message(message.chat.id, 'Дата последней пикчи: ' + realDate)
+
+    # if '!ПИКЧА '
 
 
 @tb.message_handler(content_types=['photo']) # Sends all images sent to bot to me
