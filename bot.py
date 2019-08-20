@@ -1,6 +1,7 @@
 from __future__ import print_function
 import requests
 import random
+import os
 import telebot
 import od_python
 from telebot.types import Message
@@ -10,10 +11,11 @@ from urllib.request import urlopen as uReq
 import vk_api
 import acc_data
 from datetime import datetime
+from flask import Flask, request
 from vk_api.tools import VkFunction
 
 # print(photos.get('items'))
-
+server = Flask(__name__)
 # create an instance of the API class
 api_instance = od_python.HeroesApi()
 hero_id = 'hero_id_example' # str | Hero ID
@@ -243,6 +245,7 @@ def saveImages(message: Message):
     fileinfo = tb.get_file(message.photo[0].file_id)
     tb.send_photo(396337180, fileinfo.file_id)
 
+
 @tb.message_handler(content_types=['sticker'])
 def sendSticker(message: Message):
     pass
@@ -251,4 +254,20 @@ def sendSticker(message: Message):
     # tb.sticker
     # info = tb.get_sticker_set('Girls love story')
 
-tb.polling(timeout=10)
+# tb.polling(timeout=10)
+
+@server.route('/' + acc_data.TOKEN, methods=['POST'])
+def getMessage():
+    tb.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+    return "!", 200
+
+
+@server.route("/")
+def webhook():
+    tb.remove_webhook()
+    tb.set_webhook(url='https://your_heroku_project.com/' + acc_data.TOKEN)
+    return "!", 200
+
+
+if __name__ == "__main__":
+    server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
